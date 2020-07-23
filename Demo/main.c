@@ -1,6 +1,6 @@
 /*
     FreeRTOS V7.2.0 - Copyright (C) 2012 Real Time Engineers Ltd.
-	
+
 
     ***************************************************************************
      *                                                                       *
@@ -40,7 +40,7 @@
     FreeRTOS WEB site.
 
     1 tab == 4 spaces!
-    
+
     ***************************************************************************
      *                                                                       *
      *    Having a problem?  Start by reading the FAQ "My application does   *
@@ -50,69 +50,75 @@
      *                                                                       *
     ***************************************************************************
 
-    
-    http://www.FreeRTOS.org - Documentation, training, latest information, 
+
+    http://www.FreeRTOS.org - Documentation, training, latest information,
     license and contact details.
-    
+
     http://www.FreeRTOS.org/plus - A selection of FreeRTOS ecosystem products,
     including FreeRTOS+Trace - an indispensable productivity tool.
 
-    Real Time Engineers ltd license FreeRTOS to High Integrity Systems, who sell 
-    the code with commercial support, indemnification, and middleware, under 
+    Real Time Engineers ltd license FreeRTOS to High Integrity Systems, who sell
+    the code with commercial support, indemnification, and middleware, under
     the OpenRTOS brand: http://www.OpenRTOS.com.  High Integrity Systems also
-    provide a safety engineered and independently SIL3 certified version under 
+    provide a safety engineered and independently SIL3 certified version under
     the SafeRTOS brand: http://www.SafeRTOS.com.
 */
 
 
 #include <FreeRTOS.h>
 #include <task.h>
+#include <stdbool.h>
 
 #include "Drivers/irq.h"
 #include "Drivers/gpio.h"
 
+#define GPIO_PIN_16 16
+#define GPIO_PIN_12 12
+#define LED_BLINK_DELAY 100
+#define LED_BLINK_DELAY_HALF (LED_BLINK_DELAY/2)
 void task1(void *pParam) {
 
-	int i = 0;
-	while(1) {
-		i++;
-		SetGpio(16, 1);
-		vTaskDelay(200);
-	}
+    bool LED_ON = true;
+    while(1) {
+        LED_ON = !LED_ON;
+        SetGpio(GPIO_PIN_16, LED_ON);
+        vTaskDelay(LED_BLINK_DELAY);
+    }
 }
 
 void task2(void *pParam) {
 
-	int i = 0;
-	while(1) {
-		i++;
-		vTaskDelay(100);
-		SetGpio(16, 0);
-		vTaskDelay(100);
-	}
+    bool LED_ON = true;
+    while(1) {
+        LED_ON = !LED_ON;
+        vTaskDelay(LED_BLINK_DELAY_HALF);
+        SetGpio(GPIO_PIN_12, LED_ON);
+        vTaskDelay(LED_BLINK_DELAY_HALF);
+    }
 }
 
 
 /**
- *	This is the systems main entry, some call it a boot thread.
+ *  This is the systems main entry, some call it a boot thread.
  *
- *	-- Absolutely nothing wrong with this being called main(), just it doesn't have
- *	-- the same prototype as you'd see in a linux program.
+ *  -- Absolutely nothing wrong with this being called main(), just it doesn't have
+ *  -- the same prototype as you'd see in a linux program.
  **/
 void main (void)
 {
-	SetGpioFunction(16, 1);			// RDY led
+    SetGpioFunction(GPIO_PIN_16, 1);         // RDY led
+    SetGpioFunction(GPIO_PIN_12, 1);
 
-	xTaskCreate(task1, "LED_0", 128, NULL, 0, NULL);
-	xTaskCreate(task2, "LED_1", 128, NULL, 0, NULL);
+    xTaskCreate(task1, "LED_0", 128, NULL, 0, NULL);
+    xTaskCreate(task2, "LED_1", 128, NULL, 0, NULL);
 
-	vTaskStartScheduler();
+    vTaskStartScheduler();
 
-	/*
-	 *	We should never get here, but just in case something goes wrong,
-	 *	we'll place the CPU into a safe loop.
-	 */
-	while(1) {
-		;
-	}
+    /*
+     *  We should never get here, but just in case something goes wrong,
+     *  we'll place the CPU into a safe loop.
+     */
+    while(1) {
+        ;
+    }
 }
