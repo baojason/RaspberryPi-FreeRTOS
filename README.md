@@ -41,6 +41,7 @@ The key RTOS image is the kernel.img built from above "make". However, it can no
 2. Copy the kernel.img from the output of the "make" to the same temporary folder
 3. Create a file with name as config.txt and have the following content:
     > kernel=kernel.img
+    note: since the default kernel name is "kernel.img", this file can be ignored if you only use "kernel.img" as the name.
 4. Format a mini SD card in FAT32 (no need to use a big one, in my case, I just use 2G SD card) and copy all the 4 files in the temporary folder to it.
 5. Insert this mini SD card to a Raspberry Pi before power up.
 
