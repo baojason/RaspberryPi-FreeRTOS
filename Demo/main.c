@@ -68,35 +68,90 @@
 #include <FreeRTOS.h>
 #include <task.h>
 #include <stdbool.h>
+#include <semphr.h>
 
 #include "Drivers/irq.h"
 #include "Drivers/gpio.h"
 
 #define GPIO_PIN_16 16
 #define GPIO_PIN_12 12
+#define GPIO_PIN_21 21
 #define LED_BLINK_DELAY 100
 #define LED_BLINK_DELAY_HALF (LED_BLINK_DELAY/2)
-void task1(void *pParam) {
 
-    bool LED_ON = true;
+static int siren_length = 0;
+static bool RED_LED = false;
+xSemaphoreHandle xSemaphore = NULL;
+
+void task1(void *pParam) {
+    bool ON = false;
     while(1) {
-        LED_ON = !LED_ON;
-        SetGpio(GPIO_PIN_16, LED_ON);
+        if ( xSemaphore != NULL &&
+             (xSemaphoreTake( xSemaphore, ( portTickType ) 10 ) == pdTRUE ) )
+        {
+            ON = siren_length && RED_LED;
+            RED_LED = !RED_LED;
+            if (siren_length) {
+                --siren_length;
+            }
+            xSemaphoreGive( xSemaphore );
+        }
+        SetGpio(GPIO_PIN_16, ON);
         vTaskDelay(LED_BLINK_DELAY);
     }
 }
 
 void task2(void *pParam) {
-
-    bool LED_ON = true;
+    bool ON = false;
     while(1) {
-        LED_ON = !LED_ON;
-        vTaskDelay(LED_BLINK_DELAY_HALF);
-        SetGpio(GPIO_PIN_12, LED_ON);
-        vTaskDelay(LED_BLINK_DELAY_HALF);
+        if ( xSemaphore != NULL &&
+             (xSemaphoreTake( xSemaphore, ( portTickType ) 10 ) == pdTRUE ) )
+        {
+            ON = siren_length && RED_LED;
+            xSemaphoreGive( xSemaphore );
+        }
+        SetGpio(GPIO_PIN_12, ON);
+        vTaskDelay(LED_BLINK_DELAY);
     }
 }
 
+void task3(void *pParam) {
+    int siren_state=1, a, ct=0;
+    bool debounce = false;
+    // Create the semaphore to guard a shared resource.
+    vSemaphoreCreateBinary( xSemaphore );
+
+    while(1) {
+        if (ct) {
+            ct--;
+            taskYIELD();
+        } else {
+            a = ReadGpio(GPIO_PIN_21);
+            if (siren_state != a) {
+                if (debounce) {
+                    debounce = false;
+                    // confirm that siren_state is changed
+                    siren_state = a;
+                    if (siren_state == 0) {
+                        // 0 means it is triggered, and set the siren_length to a peirod of time for alarming.
+                        if ( xSemaphore != NULL &&
+                             (xSemaphoreTake( xSemaphore, ( portTickType ) 10 ) == pdTRUE ) )
+                        {
+                            siren_length = 120;
+                            xSemaphoreGive( xSemaphore );
+                        }
+                    }
+                } else {
+                    // debounce
+                    debounce = true;
+                    ct = 100;
+                }
+            } else {
+                debounce = false;
+            }
+        }
+    }
+}
 
 /**
  *  This is the systems main entry, some call it a boot thread.
@@ -108,9 +163,11 @@ void main (void)
 {
     SetGpioFunction(GPIO_PIN_16, 1);         // RDY led
     SetGpioFunction(GPIO_PIN_12, 1);
+    SetGpioFunction(GPIO_PIN_21, 0);
 
     xTaskCreate(task1, "LED_0", 128, NULL, 0, NULL);
     xTaskCreate(task2, "LED_1", 128, NULL, 0, NULL);
+    xTaskCreate(task3, "Trigger", 128, NULL, 0, NULL);
 
     vTaskStartScheduler();
 

@@ -46,7 +46,7 @@ The key RTOS image is the kernel.img built from above "make". However, it can no
 
 ## Try on Raspberry Pi Zero W
 
-I tried this on a Raspberry Pi Zero W and it works. As soon as the power is turn on, the LED connected to GPIO 16 blinks. I then did a minor modification on main.c that have two LEDs (adding another one on GPIO 12) blinks together. This is to simulate a police car siren lights with red and blue color. Like below picture:
+I tried this on a Raspberry Pi Zero W and it works. As soon as the power is turn on, the LED connected to GPIO 16 blinks. I then did a minor modification on main.c that have two LEDs (adding another one on GPIO 12) blinks together. Also, I add a TCRT5000 Infrared Reflective Sensor on GPIO 21, as soon as it detect an object it will trigger the siren LEDs to blink for a while. This is to simulate a police car siren lights with red and blue color. Like below picture:
 
 ![Raspberry Pi Zero W with FreeRTOS](/demo_rpi0w.png)
 
